@@ -4,7 +4,7 @@ FROM devopshandson3/jdk-17-mvn-3.9.5-tomcat10:1.0
 
 COPY target/petclinic.war /bin/apache-tomcat-10.1.18/webapps/
 # expose
-#adding this line to test pollscm -trigger
+#adding this line to test pollscm -trigger 
 EXPOSE 8080
 
 WORKDIR /bin/apache-tomcat-10.1.18/bin
