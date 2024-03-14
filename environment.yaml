@@ -1,0 +1,20 @@
+# for dev and test are in same account in different region
+
+dev:
+  accountid: 12345768890
+  ECR-repository: 
+  region: 
+  cluster_name:
+  service_name:
+test:
+  accountid: 12345768890
+  ECR-repository: 
+  region:
+  cluster_name:
+  service_name:
+prod:
+  accountid: 143678902
+  ECR-repository: 
+  region:
+  cluster_name:
+  service_name:

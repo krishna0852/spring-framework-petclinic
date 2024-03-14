@@ -1,0 +1,222 @@
+def repoName = "krishna0852/Petclinic-Terraform.git"
+def protocol = "https://"
+def credentialsid= 'tokencreds'
+def proUrl = protocol +"krishna0852:" + getTokenCredentials(credentialsid) + "@github.com/" + repoName
+
+//def data=getTokenCredentials(credentialsid)
+
+echo "${proUrl}"
+
+def getTokenCredentials(credentialsId){
+    withCredentials([string(credentialsId: credentialsId, variable: 'token')]) {
+       return token
+}
+}
+
+def getGitBranches(String proUrl) {
+    echo "$proUrl"
+    def gitBranches = sh(script: "git ls-remote --heads ${proUrl}", returnStdout: true).trim()
+    def masterBranch = gitBranches.replaceAll(/.*refs\/heads\/(\S+).*/, '$1')
+   // echo "$masterBranch"
+   // echo "writing error"
+    //params.SELECT_BRANCH_TO_DEPLOY = masterBranch
+    branches=masterBranch
+    //echo "listing branches into branches-variable"
+   // echo "$branches"
+    return branches
+}
+
+node {
+    branches=getGitBranches(proUrl)
+}
+
+pipeline {
+    agent any
+    
+    tools {
+        jdk 'JAVA_HOME'
+        maven 'maven_home'
+    }
+    
+    
+    environment{
+        SCANNER_HOME=tool 'sonar-scanner'
+    }
+    
+     parameters {
+        choice(name: 'selectedbranch', choices: branches, description: 'APP-ENV-TO-DEPLOY')
+       // choice(name: 'terraform', choices: ['Apply','Destroy'], description: 'Terraform Action')
+        booleanParam(name: 'confirm', defaultValue: false, description: 'userconfirm')
+
+    }
+
+    stages{
+        stage('pre-validation'){
+            
+            steps{
+                 script{
+                     echo 'entered pre-validation-script'
+                    if(params.confirm==false)
+                    {
+                      error("user didn't check the confirm boolean parameter")
+                    }
+                    if(params.selectedbranch==''){
+                        error('No branches to deploy')
+                    }
+                }
+                 
+            }
+        }
+
+         stage('approval for branch-deployment'){
+            steps{
+
+                script {
+                    
+                   echo "entered into script"
+                   def USER_INPUT = input(
+                    message: "Are you sure you want to deploy in ${params.selectedbranch} branch, Do you confirm?",
+                    parameters: [
+                            [$class: 'ChoiceParameterDefinition',
+                             choices: [params.selectedbranch].join('\n'),
+                             name: 'input',
+                             description: 'Menu - select box option']
+                    ])
+
+                    def yamlContent = readYaml(file: '/var/lib/jenkins/workspace/deploy/env.yaml')
+                      // you need to install Pipeline Utility Steps to use readYaml() function
+                    if (params.selectedbranch=="dev"){
+                  
+                        AWS_ACCOUNT_ID = yamlContent.dev.accountid
+                        echo "${AWS_ACCOUNT_ID}"
+
+                    }
+                    else if (params.selectedbranch=="test"){
+
+                          AWS_ACCOUNT_ID = yamlContent.test.accountid
+                          echo "${AWS_ACCOUNT_ID}"
+
+                    }
+                    else if (params.selectedbranch=="prod"){
+                          AWS_ACCOUNT_ID = yamlContent.prod.accountid
+                          echo "${AWS_ACCOUNT_ID}"
+
+                    }
+                
+                }
+
+                      
+            }
+        }
+
+         stage("checkout") {
+            steps {
+               checkout scmGit(branches: [[name: selectedbranch]], extensions: [], userRemoteConfigs: [[url: 'https://github.com/krishna0852/Petclinic-Terraform.git']])   
+            }
+        }
+
+        stage("compile"){
+            steps{
+                sh 'mvn clean compile'
+            }
+        }
+
+         stage("Test-cases"){
+            steps{
+                sh 'mvn test'
+            }
+        }
+        
+        stage("sonarqube analysics"){
+            steps{
+                withSonarQubeEnv('sonar-scanner') {
+                  sh ''' $SCANNER_HOME/bin/sonar-scanner\
+                         -Dsonar.projectName=petclinic\
+                         -Dsonar.java.binaries=. \
+                         -Dsonar.projectKey=petclinic 
+                  '''                      
+              }
+            }
+        }
+
+         stage("OWASP-Dependency-check"){
+            steps{
+                dependencyCheck additionalArguments: '--scan ./ --format HTML',
+                odcInstallation: 'owasp-check' //we need to mention the owsap installation path that we configured
+                dependencyCheckPublisher pattern: '**/dependency-check-report.html'
+            }
+        }
+
+          stage("Build"){
+            steps{
+                sh 'mvn clean install'
+            }
+        }
+
+         stage("Docker-build"){
+            steps{
+              
+              script{
+              
+                  withDockerRegistry(credentialsId: 'Docker', toolName: 'docker') {
+                         
+                  //  sh "docker build -t devopshandson3/petapp:${BUILD_NUMBER} ."
+                     sh "docker build -t petapp:${BUILD_NUMBER} ."
+                    //sh "docker push devopshandson3/petapp:${BUILD_NUMBER}"
+                   //sh 'docker tag test-repo:latest 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com/test-repo:latest'
+                    // sh 'docker tag petapp:${BUILD_NUMBER} ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com/${repo-name}:${BUILD_NUMBER}'
+
+                 }
+              }
+             
+           }
+
+
+    }
+
+    stage("logging and pushing to ECR"){
+           steps{
+              
+              script{
+              
+                  withDockerRegistry(credentialsId: 'Docker', toolName: 'docker') {
+                         
+                  //  sh "docker build -t devopshandson3/petapp:${BUILD_NUMBER} ."
+                     //sh "docker build -t petapp:${BUILD_NUMBER} ."
+                    //sh "docker push devopshandson3/petapp:${BUILD_NUMBER}"
+                   //sh 'docker tag test-repo:latest 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com/test-repo:latest'
+                     sh  'aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com'
+                     sh  'docker tag petapp:${BUILD_NUMBER} ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com/${repo-name}:${BUILD_NUMBER}'
+                     sh  'docker push ${aws_account_id}.dkr.ecr.${region}.amazonaws.com/{repo-name}:${BUILD_NUMBER}'
+                     echo "pushed image to ECR...."
+
+                 }
+              }
+             
+           }
+
+    }
+
+    stage("ECS service deploy"){
+        steps{
+              echo "deploying to ECS..."
+
+        }
+    } 
+
+
+     
+  }
+}
+
+
+// 1) login
+
+// aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com
+
+// 2) docker build -t test-repo. 
+
+// 3) docker tag test-repo:latest 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com/test-repo:latest
+
+// 4)docker push 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com/test-repo:latest
+       
