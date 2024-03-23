@@ -2,7 +2,7 @@
 
 dev:
   accountid: 730335449261
-  ECR-repository: test
+  repo-name: test
   region: ap-southeast-2
   cluster_name: dev-petclinic-cluster
   service_name: petclinic

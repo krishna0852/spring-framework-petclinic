@@ -83,27 +83,27 @@ pipeline {
                              description: 'Menu - select box option']
                     ])
 
-                    def yamlContent = readYaml(file: '/var/lib/jenkins/workspace/deploy/env.yaml')
-                      // you need to install Pipeline Utility Steps to use readYaml() function
-                    if (params.selectedbranch=="dev"){
+                //     def yamlContent = readYaml(file: '/var/lib/jenkins/workspace/deploy/env.yaml')
+                //       // you need to install Pipeline Utility Steps to use readYaml() function
+                //     if (params.selectedbranch=="dev"){
                   
-                        AWS_ACCOUNT_ID = yamlContent.dev.accountid
-                        echo "${AWS_ACCOUNT_ID}"
+                //         AWS_ACCOUNT_ID = yamlContent.dev.accountid
+                //         echo "${AWS_ACCOUNT_ID}"
 
-                    }
-                    else if (params.selectedbranch=="test"){
+                //     }
+                //     else if (params.selectedbranch=="test"){
 
-                          AWS_ACCOUNT_ID = yamlContent.test.accountid
-                          echo "${AWS_ACCOUNT_ID}"
+                //           AWS_ACCOUNT_ID = yamlContent.test.accountid
+                //           echo "${AWS_ACCOUNT_ID}"
 
-                    }
-                    else if (params.selectedbranch=="prod"){
-                          AWS_ACCOUNT_ID = yamlContent.prod.accountid
-                          echo "${AWS_ACCOUNT_ID}"
+                //     }
+                //     else if (params.selectedbranch=="prod"){
+                //           AWS_ACCOUNT_ID = yamlContent.prod.accountid
+                //           echo "${AWS_ACCOUNT_ID}"
 
-                    }
+                //     }
                 
-                }
+                // }
 
                       
             }
