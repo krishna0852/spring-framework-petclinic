@@ -190,12 +190,12 @@ pipeline {
                    //sh 'docker tag test-repo:latest 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com/test-repo:latest'
                      aws_account_id=yamlContent."${params.selectedbranch}".accountid
                      region=yamlContent."${params.selectedbranch}".region
-                     repo-name=yamlContent."${params.selectedbranch}".ECR-repository
+                     reponame=yamlContent."${params.selectedbranch}".ECR-repository
 
 
                      sh  'aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com'
-                     sh  'docker tag petapp:${BUILD_NUMBER} ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com/${repo-name}:${BUILD_NUMBER}'
-                     sh  'docker push ${aws_account_id}.dkr.ecr.${region}.amazonaws.com/{repo-name}:${BUILD_NUMBER}'
+                     sh  'docker tag petapp:${BUILD_NUMBER} ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com/${reponame}:${BUILD_NUMBER}'
+                     sh  'docker push ${aws_account_id}.dkr.ecr.${region}.amazonaws.com/{reponame}:${BUILD_NUMBER}'
                      echo "pushed image to ECR...."
 
                  }
