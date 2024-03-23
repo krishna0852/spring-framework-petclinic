@@ -6,6 +6,7 @@ dev:
   region: ap-southeast-2
   cluster_name: dev-petclinic-cluster
   service_name: petclinic
+  task_definition: petclinic-web
 test:
   accountid: 12345768890
   ECR-repository: 
