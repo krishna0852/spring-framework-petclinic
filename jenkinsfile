@@ -33,10 +33,10 @@ node {
 pipeline {
     agent any
     
-    tools {
-        jdk 'JAVA_HOME'
-        maven 'maven_home'
-    }
+    // tools {
+    //     jdk 'JAVA_HOME'
+    //     maven 'maven_home'
+    // }
     
     
     environment{
@@ -174,10 +174,13 @@ pipeline {
 
     }
 
-    stage("logging and pushing to ECR"){
+    stage("Pushing to ECR"){
            steps{
               
               script{
+
+
+                  def yamlContent = readYaml(file: '/var/lib/jenkins/workspace/deploy/environment.yaml')
               
                   withDockerRegistry(credentialsId: 'Docker', toolName: 'docker') {
                          
@@ -185,6 +188,11 @@ pipeline {
                      //sh "docker build -t petapp:${BUILD_NUMBER} ."
                     //sh "docker push devopshandson3/petapp:${BUILD_NUMBER}"
                    //sh 'docker tag test-repo:latest 730335449261.dkr.ecr.ap-southeast-2.amazonaws.com/test-repo:latest'
+                     aws_account_id=yamlContent."${params.selectedbranch}".accountid
+                     region=yamlContent."${params.selectedbranch}".region
+                     repo-name=yamlContent."${params.selectedbranch}".ECR-repository
+
+
                      sh  'aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com'
                      sh  'docker tag petapp:${BUILD_NUMBER} ${aws_account_id}.dkr.ecr.ap-southeast-2.amazonaws.com/${repo-name}:${BUILD_NUMBER}'
                      sh  'docker push ${aws_account_id}.dkr.ecr.${region}.amazonaws.com/{repo-name}:${BUILD_NUMBER}'

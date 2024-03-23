@@ -1,11 +1,11 @@
 # for dev and test are in same account in different region
 
 dev:
-  accountid: 12345768890
-  ECR-repository: 
-  region: 
-  cluster_name:
-  service_name:
+  accountid: 730335449261
+  ECR-repository: test
+  region: ap-southeast-2
+  cluster_name: dev-petclinic-cluster
+  service_name: petclinic
 test:
   accountid: 12345768890
   ECR-repository: 
